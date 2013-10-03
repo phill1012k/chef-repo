@@ -1,0 +1,17 @@
+{
+  "name": "Oxford",
+  "description": "linux servers in the Oxford office",
+  "cookbook_versions": {
+  },
+  "json_class": "Chef::Environment",
+  "chef_type": "environment",
+  "default_attributes": {
+    "time_server": {
+      "time_server": "time.aeriandi.com"
+    },
+    "override_attributes": {
+    }
+  },
+  "override_attributes": {
+  }
+}
