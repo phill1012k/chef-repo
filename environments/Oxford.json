@@ -2,6 +2,7 @@
   "name": "Oxford",
   "description": "linux servers in the Oxford office",
   "cookbook_versions": {
+  "ntp":	"= 0.2.0"
   },
   "json_class": "Chef::Environment",
   "chef_type": "environment",
