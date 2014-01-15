@@ -1,0 +1,78 @@
+#!/bin/bash
+
+################################################################################
+### Variables
+################################################################################
+
+# Interface
+IF_SRV0=eth0
+
+# SSH access
+NET_SSH[0]=172.16.2.103
+NET_SSH[1]=172.16.6.104
+NET_SSH[2]=172.17.6.104
+
+
+################################################################################
+### SIP
+################################################################################
+
+iptables -A INPUT -p udp -m state --state NEW,ESTABLISHED --sport 5060 --dport 5060 -j ACCEPT -i ${IF_SRV0}
+iptables -A OUTPUT -p udp -m state --state NEW,ESTABLISHED --sport 5060 --dport 5060 -j ACCEPT -o ${IF_SRV0}
+iptables -A INPUT -p udp -m state --state NEW,ESTABLISHED --sport 5060 --dport 5062 -j ACCEPT -i ${IF_SRV0}
+iptables -A OUTPUT -p udp -m state --state NEW,ESTABLISHED --sport 5062 --dport 5060 -j ACCEPT -o ${IF_SRV0}
+
+
+################################################################################
+### SFTP
+################################################################################
+
+for src in ${NET_SSH[*]}
+do
+iptables -A INPUT  -p tcp -i ${IF_SRV0} -m state --state NEW,ESTABLISHED -s ${src} --sport 1024: --dport 22    -j ACCEPT
+iptables -A OUTPUT -p tcp -o ${IF_SRV0} -m state --state     ESTABLISHED -d ${src} --sport 22    --dport 1024: -j ACCEPT
+done
+
+################################################################################
+### RTP
+################################################################################
+iptables -A INPUT -p udp -m state --state NEW,ESTABLISHED --sport 10000:60000 --dport 10000:60000 -j ACCEPT -i ${IF_SRV0}
+iptables -A OUTPUT -p udp -m state --state NEW,ESTABLISHED --dport 10000:60000 --sport 10000:60000 -j ACCEPT -o ${IF_SRV0}
+
+#iptables -A INPUT -p icmp --icmp-type 3 -m state --state NEW,ESTABLISHED --sport 10000:60000 --dport 10000:60000 -j ACCEPT -i ${IF_SRV0}
+#iptables -A OUTPUT -p icmp --icmp-type 3 -m state --state NEW,ESTABLISHED --dport 10000:60000 --sport 10000:60000 -j ACCEPT -o ${IF_SRV0}
+
+################################################################################
+### Rabbit
+################################################################################
+iptables -A INPUT -p tcp -m state --state NEW,ESTABLISHED --sport 5672 --dport 1024:65535 -j ACCEPT -i ${IF_SRV0}
+iptables -A OUTPUT -p tcp -m state --state NEW,ESTABLISHED --sport 1024:65535 --dport 5672 -j ACCEPT -o ${IF_SRV0}
+
+iptables -A INPUT -p tcp -m state --state NEW,ESTABLISHED --sport 1024:65535 --dport 5672 -j ACCEPT -i ${IF_SRV0}
+iptables -A OUTPUT -p tcp -m state --state NEW,ESTABLISHED --sport 5672 --dport 1024:65535 -j ACCEPT -o ${IF_SRV0}
+
+
+################################################################################
+### ESL
+################################################################################
+iptables -A INPUT -p tcp -m state --state NEW,ESTABLISHED --dport 8021 -j ACCEPT -i ${IF_SRV0}
+iptables -A OUTPUT -p tcp -m state --state NEW,ESTABLISHED --sport 8021 --dport 1024:65535 -j ACCEPT -o ${IF_SRV0}
+
+################################################################################
+### FreeSwitch License
+################################################################################
+iptables -A INPUT -p tcp -s 198.22.64.225 -m state --state ESTABLISHED --dport 1024:65535 -j ACCEPT -i ${IF_SRV0}
+iptables -A OUTPUT -p tcp -d 198.22.64.225 -m state --state NEW,ESTABLISHED --dport 80 -j ACCEPT -o ${IF_SRV0}
+iptables -A OUTPUT -p tcp -d 198.22.64.225 -m state --state NEW,ESTABLISHED --dport 443 -j ACCEPT -o ${IF_SRV0}
+
+################################################################################
+#### RTP Control Ports
+################################################################################
+iptables -A OUTPUT -p udp -m state --state NEW,ESTABLISHED --sport 1024:65535 --dport 9060 -j ACCEPT -o ${IF_SRV0}
+
+################################################################################
+### SFTP from FE Webservers
+################################################################################
+iptables -A INPUT  -p tcp -m state --state NEW,ESTABLISHED --sport 1024: --dport 22 -m iprange --src-range 172.16.5.1-172.16.5.220 -j ACCEPT -i ${IF_SRV0}
+iptables -A OUTPUT -p tcp -m state --state     ESTABLISHED --sport 22 --dport 1024: -m iprange --dst-range 172.16.5.1-172.16.5.220 -j ACCEPT -o ${IF_SRV0}
+

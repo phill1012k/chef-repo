@@ -1,0 +1,138 @@
+#!/bin/bash
+
+IF_SRV0=eth0
+IF_SRV1=eth1
+IF_SRV2=eth2
+IF_SRV3=eth3
+
+# Tel Management Servers
+SRV_MAN[0]=172.16.2.112
+SRV_MAN[1]=172.16.2.113
+
+NET_SSH[0]=54.247.137.237
+
+# Lisa Servers
+SRV_LISA[0]=172.16.6.105
+SRV_LISA[1]=172.16.2.112
+SRV_LISA[2]=172.16.2.113
+
+# A_SBC Servers
+EX_SRV_SBC_1=<%= @SBC1ExternalIP %>
+EX_SRV_SBC_2=<%= @SBC2ExternalIP %>
+IN_SRV_SBC_1=<%= @SBC1InternalIP %>
+IN_SRV_SBC_2=<%= @SBC2InternalIP %>
+MPLS_SRV_SBC_1=<%= @SBC1MPLSIP %>
+MPLS_SRV_SBC_2=<%= @SBC2MPLSIP %>
+AIRBNB_SRV_SBC_1=<%= @SBC1AIRBNBIP %>
+AIRBNB_SRV_SBC_2=<%= @SBC2AIRBNBIP %>
+
+################################################################################
+### Lisa
+################################################################################
+for dst in ${SRV_LISA[*]}
+do
+iptables -A INPUT -p tcp -m state --state NEW,ESTABLISHED --sport 5060 --dport 5060 -j ACCEPT -i ${IF_SRV0} -s ${dst}
+iptables -A OUTPUT -p tcp -m state --state NEW,ESTABLISHED --sport 5060 --dport 5060 -j ACCEPT -o ${IF_SRV0} -d ${dst}
+done
+
+################################################################################
+### SIP
+################################################################################
+
+iptables -A INPUT -p udp -m state --state NEW,ESTABLISHED --sport 5060 --dport 5060 -j ACCEPT -i ${IF_SRV0}
+iptables -A OUTPUT -p udp -m state --state NEW,ESTABLISHED --sport 5060 --dport 5060 -j ACCEPT -o ${IF_SRV0}
+
+iptables -A INPUT -p udp -m state --state NEW,ESTABLISHED --sport 5062 --dport 5060 -j ACCEPT -i ${IF_SRV0}
+iptables -A OUTPUT -p udp -m state --state NEW,ESTABLISHED --sport 5060 --dport 5062 -j ACCEPT -o ${IF_SRV0}
+
+iptables -A INPUT -p udp -m state --state NEW,ESTABLISHED --sport 5090 --dport 5060 -j ACCEPT -i ${IF_SRV0}
+iptables -A OUTPUT -p udp -m state --state NEW,ESTABLISHED --sport 5060 --dport 5090 -j ACCEPT -o ${IF_SRV0}
+
+iptables -A INPUT -p udp -m state --state NEW,ESTABLISHED --sport 5060 --dport 5060 -j ACCEPT -i ${IF_SRV1}
+iptables -A OUTPUT -p udp -m state --state NEW,ESTABLISHED --sport 5060 --dport 5060 -j ACCEPT -o ${IF_SRV1}
+
+iptables -A INPUT -p udp -m state --state NEW,ESTABLISHED --sport 5060 --dport 5060 -j ACCEPT -i ${IF_SRV2}
+iptables -A OUTPUT -p udp -m state --state NEW,ESTABLISHED --sport 5060 --dport 5060 -j ACCEPT -o ${IF_SRV2}
+
+iptables -A INPUT -p udp -m state --state NEW,ESTABLISHED --sport 5060 --dport 5060 -j ACCEPT -i ${IF_SRV3}
+iptables -A OUTPUT -p udp -m state --state NEW,ESTABLISHED --sport 5060 --dport 5060 -j ACCEPT -o ${IF_SRV3}
+
+################################################################################
+### MYSQL
+################################################################################
+for dst in ${SRV_MAN[*]}
+do
+iptables -A INPUT -p tcp -m state --state NEW,ESTABLISHED --dport 3306 -j ACCEPT -i ${IF_SRV0} -s ${dst}
+iptables -A OUTPUT -p tcp -m state --state ESTABLISHED --dport 1024:65535 -j ACCEPT -o ${IF_SRV0} -d ${dst}
+done
+
+################################################################################
+### SIP TCP From Management Servers
+################################################################################
+
+
+for src in ${SRV_MAN[*]}
+do
+iptables -A INPUT -p tcp -m state --state NEW,ESTABLISHED --dport 5060 -j ACCEPT -i ${IF_SRV0} -s ${src}
+iptables -A OUTPUT -p tcp -m state --state ESTABLISHED --dport 1024:65535 -j ACCEPT -o ${IF_SRV0} -d ${src}
+done
+
+################################################################################
+### Web Browsing
+################################################################################
+iptables -A OUTPUT -p tcp -m state --state NEW,ESTABLISHED --dport 80 -o ${IF_SRV2} -j ACCEPT -d 46.137.189.181
+iptables -A OUTPUT -p tcp -m state --state NEW,ESTABLISHED --dport 443 -o ${IF_SRV2} -j ACCEPT -d 46.137.189.181
+iptables -A INPUT -p tcp -m state --state ESTABLISHED --dport 1024:65535 -j ACCEPT -i ${IF_SRV2} -s 46.137.189.181
+
+################################################################################
+### SSH Administration
+################################################################################
+for src in ${NET_SSH[*]}
+do
+iptables -A OUTPUT -p tcp -o ${IF_SRV2} -m state --state NEW,ESTABLISHED -d ${src} --sport 1024:65535 --dport 22    -j ACCEPT
+iptables -A INPUT -p tcp -i ${IF_SRV2} -m state --state     ESTABLISHED -s ${src} --sport 22    --dport 1024:65535 -j ACCEPT
+done
+
+################################################################################
+#### RTP Control Ports
+################################################################################
+iptables -A INPUT -p udp -m state --state NEW,ESTABLISHED --sport 9000:9222 -j ACCEPT -i ${IF_SRV0}
+iptables -A INPUT -p udp -m state --state NEW,ESTABLISHED --sport 9000:9222 -j ACCEPT -i ${IF_SRV1}
+iptables -A INPUT -p udp -m state --state NEW,ESTABLISHED --sport 9000:9222 -j ACCEPT -i ${IF_SRV2}
+iptables -A INPUT -p udp -m state --state NEW,ESTABLISHED --sport 9000:9222 -j ACCEPT -i ${IF_SRV3}
+
+iptables -A OUTPUT -p udp -m state --state NEW,ESTABLISHED --dport 9000:9222 -j ACCEPT -o ${IF_SRV0}
+iptables -A OUTPUT -p udp -m state --state NEW,ESTABLISHED --dport 9000:9222 -j ACCEPT -o ${IF_SRV1}
+iptables -A OUTPUT -p udp -m state --state NEW,ESTABLISHED --dport 9000:9222 -j ACCEPT -o ${IF_SRV2}
+iptables -A OUTPUT -p udp -m state --state NEW,ESTABLISHED --dport 9000:9222 -j ACCEPT -o ${IF_SRV3}
+
+
+################################################################################
+#### Monitoring / Kamailio
+################################################################################
+iptables -A OUTPUT -p udp -m state --state NEW,ESTABLISHED --sport 1024:65535 --dport 9060 -j ACCEPT -o ${IF_SRV0}
+
+
+################################################################################
+#### HA Heartbeat
+################################################################################
+
+iptables -A OUTPUT -p udp -m state --state NEW,ESTABLISHED --sport 1024:65535 --dport 694 -j ACCEPT -o ${IF_SRV1} -d ${MPLS_SRV_SBC_1}
+iptables -A INPUT -p udp -m state --state NEW,ESTABLISHED --sport 1024:65535 --dport 694 -j ACCEPT -i ${IF_SRV1} -d ${MPLS_SRV_SBC_1}
+iptables -A OUTPUT -p udp -m state --state NEW,ESTABLISHED --sport 1024:65535 --dport 694 -j ACCEPT -o ${IF_SRV1} -d ${MPLS_SRV_SBC_2}
+iptables -A INPUT -p udp -m state --state NEW,ESTABLISHED --sport 1024:65535 --dport 694 -j ACCEPT -i ${IF_SRV1} -d ${MPLS_SRV_SBC_2}
+
+iptables -A OUTPUT -p udp -m state --state NEW,ESTABLISHED --sport 1024:65535 --dport 694 -j ACCEPT -o ${IF_SRV0} -d ${IN_SRV_SBC_1}
+iptables -A INPUT -p udp -m state --state NEW,ESTABLISHED --sport 1024:65535 --dport 694 -j ACCEPT -i ${IF_SRV0} -d ${IN_SRV_SBC_1}
+iptables -A OUTPUT -p udp -m state --state NEW,ESTABLISHED --sport 1024:65535 --dport 694 -j ACCEPT -o ${IF_SRV0} -d ${IN_SRV_SBC_2}
+iptables -A INPUT -p udp -m state --state NEW,ESTABLISHED --sport 1024:65535 --dport 694 -j ACCEPT -i ${IF_SRV0} -d ${IN_SRV_SBC_2}
+
+iptables -A OUTPUT -p udp -m state --state NEW,ESTABLISHED --sport 1024:65535 --dport 694 -j ACCEPT -o ${IF_SRV2} -d ${EX_SRV_SBC_1}
+iptables -A INPUT -p udp -m state --state NEW,ESTABLISHED --sport 1024:65535 --dport 694 -j ACCEPT -i ${IF_SRV2} -d ${EX_SRV_SBC_1}
+iptables -A OUTPUT -p udp -m state --state NEW,ESTABLISHED --sport 1024:65535 --dport 694 -j ACCEPT -o ${IF_SRV2} -d ${EX_SRV_SBC_2}
+iptables -A INPUT -p udp -m state --state NEW,ESTABLISHED --sport 1024:65535 --dport 694 -j ACCEPT -i ${IF_SRV2} -d ${EX_SRV_SBC_2}
+
+iptables -A OUTPUT -p udp -m state --state NEW,ESTABLISHED --sport 1024:65535 --dport 694 -j ACCEPT -o ${IF_SRV3} -d ${AIRBNB_SRV_SBC_1}
+iptables -A INPUT -p udp -m state --state NEW,ESTABLISHED --sport 1024:65535 --dport 694 -j ACCEPT -i ${IF_SRV3} -d ${AIRBNB_SRV_SBC_1}
+iptables -A OUTPUT -p udp -m state --state NEW,ESTABLISHED --sport 1024:65535 --dport 694 -j ACCEPT -o ${IF_SRV3} -d ${AIRBNB_SRV_SBC_2}
+iptables -A INPUT -p udp -m state --state NEW,ESTABLISHED --sport 1024:65535 --dport 694 -j ACCEPT -i ${IF_SRV3} -d ${AIRBNB_SRV_SBC_2}

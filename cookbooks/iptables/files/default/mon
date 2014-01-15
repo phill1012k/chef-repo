@@ -1,0 +1,40 @@
+#!/bin/bash
+
+
+# Interface
+IF_SRV0=eth0
+
+# Tel Management Servers
+SRV_MAN[0]=172.16.2.112
+SRV_MAN[1]=172.16.2.113
+
+################################################################################
+### Apache
+################################################################################
+for dst in ${SRV_MAN[*]}
+do
+iptables -A INPUT -p tcp -m state --state NEW,ESTABLISHED --dport 80 -i ${IF_SRV0} -j ACCEPT -s ${dst}
+iptables -A OUTPUT -p tcp -m state --state ESTABLISHED --dport 1024:65535 -o ${IF_SRV0} -j ACCEPT -d ${dst}
+iptables -A INPUT -p tcp -m state --state NEW,ESTABLISHED --dport 443 -i ${IF_SRV0} -j ACCEPT -s ${dst}
+done
+
+################################################################################
+### MYSQL
+################################################################################
+for dst in ${SRV_MAN[*]}
+do
+iptables -A INPUT -p tcp -m state --state NEW,ESTABLISHED --dport 3306 -j ACCEPT -i ${IF_SRV0}
+iptables -A OUTPUT -p tcp -m state --state ESTABLISHED --dport 1024:65535 -j ACCEPT -o ${IF_SRV0}
+done
+
+################################################################################
+### kamailio
+################################################################################
+iptables -A INPUT -p udp -m state --state NEW,ESTABLISHED --dport 9060 -j ACCEPT -i ${IF_SRV0}
+iptables -A INPUT -p udp -m state --state NEW,ESTABLISHED --dport 9080 -j ACCEPT -i ${IF_SRV0}
+
+################################################################################
+### Rabbit
+################################################################################
+iptables -A INPUT -p tcp -m state --state NEW,ESTABLISHED --dport 5672 -j ACCEPT -i ${IF_SRV0}
+iptables -A OUTPUT -p tcp -m state --state NEW,ESTABLISHED --dport 1024:65535 -j ACCEPT -o ${IF_SRV0}

@@ -1,0 +1,33 @@
+################################################################################
+### Variables
+################################################################################
+# Interface
+IF_SRV0=eth0
+
+################################################################################
+### Rabbit
+################################################################################
+# RMQ Management
+iptables -A OUTPUT -p tcp -m state --state NEW,ESTABLISHED --sport 15672 -j ACCEPT -o ${IF_SRV0}
+iptables -A INPUT -p tcp -m state --state NEW,ESTABLISHED --dport 15672 -j ACCEPT -i ${IF_SRV0}
+
+# RMQ Main port
+iptables -A OUTPUT -p tcp -m state --state NEW,ESTABLISHED --sport 5672 -j ACCEPT -o ${IF_SRV0}
+iptables -A INPUT -p tcp -m state --state NEW,ESTABLISHED --dport 5672 -j ACCEPT -i ${IF_SRV0}
+
+# Respond on ephemeral
+iptables -A INPUT -p tcp -m state --state ESTABLISHED --sport 1024:65535 -j ACCEPT -i ${IF_SRV0}
+
+
+# port mapper
+iptables -A OUTPUT -p tcp -m state --state NEW,ESTABLISHED --dport 4369 -j ACCEPT -o ${IF_SRV0}
+iptables -A OUTPUT -p tcp -m state --state NEW,ESTABLISHED --sport 4369 -j ACCEPT -o ${IF_SRV0}
+iptables -A INPUT -p tcp -m state --state NEW,ESTABLISHED --dport 4369 -j ACCEPT -i ${IF_SRV0}
+
+iptables -A OUTPUT -p tcp -m state --state NEW,ESTABLISHED --sport 55672 -j ACCEPT -o ${IF_SRV0}
+iptables -A INPUT -p tcp -m state --state NEW,ESTABLISHED --dport 55672 -j ACCEPT -i ${IF_SRV0}
+
+iptables -A OUTPUT -p tcp -m state --state NEW,ESTABLISHED --sport 50000:50050 -j ACCEPT -o ${IF_SRV0}
+iptables -A OUTPUT -p tcp -m state --state NEW,ESTABLISHED --dport 50000:50050 -j ACCEPT -o ${IF_SRV0}
+iptables -A INPUT -p tcp -m state --state NEW,ESTABLISHED --dport 50000:50050 -j ACCEPT -i ${IF_SRV0}
+

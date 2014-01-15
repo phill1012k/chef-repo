@@ -1,0 +1,18 @@
+#!/bin/bash
+
+################################################################################
+### Variables
+################################################################################
+
+# Interface
+IF_SRV0=eth0
+
+################################################################################
+### SIP
+################################################################################
+iptables -A INPUT -p udp -m state --state NEW,ESTABLISHED --dport 5060 -j ACCEPT -i ${IF_SRV0}
+iptables -A OUTPUT -p udp -m state --state NEW,ESTABLISHED --dport 1024:65535 -j ACCEPT -o ${IF_SRV0}
+
+iptables -A INPUT -p udp -m state --state NEW,ESTABLISHED --dport 5080 -j ACCEPT -i ${IF_SRV0}
+iptables -A OUTPUT -p udp -m state --state NEW,ESTABLISHED --dport 1024:65535 -j ACCEPT -o ${IF_SRV0}
+

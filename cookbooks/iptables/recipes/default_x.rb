@@ -11,7 +11,11 @@ package "iptables-persistent" do
 end
 
 template "/etc/iptables/rules.v4" do
-    source "rules.v4.erb"
+    source "rules_x.v4.erb"
+end
+
+service "iptables-persistent" do
+  action [:enable, :start]
 end
 
 cookbook_file "/etc/iptables/firewall.down" do
@@ -26,8 +30,4 @@ cookbook_file "/etc/iptables/enable.logging" do
         owner 'root'
         group 'root'
         mode '0700'
-end
-
-service "iptables-persistent" do
-  action [:enable, :start]
 end

@@ -1,17 +1,12 @@
-# Cookbook Name:: iptables
-# Recipe:: default
-#
-# Copyright 2013, YOUR_COMPANY_NAME
-#
-# All rights reserved - Do Not Redistribute
-#
+# Cookbook Name:: iptables for FE Servers
+
 
 package "iptables-persistent" do
   action :install
 end
 
 template "/etc/iptables/rules.v4" do
-    source "rules.v4.erb"
+    source "rules.v4.fe.erb"
 end
 
 cookbook_file "/etc/iptables/firewall.down" do

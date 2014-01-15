@@ -1,0 +1,52 @@
+#!/bin/bash
+
+################################################################################
+### Variables
+################################################################################
+
+# Interface
+IF_SRV0=eth0
+IF_SRV1=eth1
+
+# SSH access
+NET_SSH[0]=172.16.2.103
+
+################################################################################
+### SIP
+################################################################################
+#iptables -A INPUT -p udp -m state --state NEW,ESTABLISHED --sport 5060 --dport 5060 -j ACCEPT -i ${IF_SRV0}
+#iptables -A OUTPUT -p udp -m state --state NEW,ESTABLISHED --sport 5060 --dport 5060 -j ACCEPT -o ${IF_SRV0}
+
+iptables -A INPUT -p udp -m state --state NEW,ESTABLISHED --sport 5060 --dport 5060 -j ACCEPT -i ${IF_SRV1}
+iptables -A OUTPUT -p udp -m state --state NEW,ESTABLISHED --sport 5060 --dport 5060 -j ACCEPT -o ${IF_SRV1}
+
+
+################################################################################
+### RTP
+################################################################################
+iptables -A INPUT -p udp -m state --state NEW,ESTABLISHED --sport 10000:60000 --dport 10000:60000 -j ACCEPT -i ${IF_SRV0}
+iptables -A OUTPUT -p udp -m state --state NEW,ESTABLISHED --dport 10000:60000 --sport 10000:60000 -j ACCEPT -o ${IF_SRV0}
+
+iptables -A INPUT -p icmp --icmp-type 3 -m state --state NEW,ESTABLISHED -j ACCEPT -i ${IF_SRV0}
+iptables -A OUTPUT -p icmp --icmp-type 3 -m state --state NEW,ESTABLISHED -j ACCEPT -o ${IF_SRV0}
+
+iptables -A INPUT -p udp -m state --state NEW,ESTABLISHED --sport 10000:60000 --dport 10000:60000 -j ACCEPT -i ${IF_SRV1}
+iptables -A OUTPUT -p udp -m state --state NEW,ESTABLISHED --dport 10000:60000 --sport 10000:60000 -j ACCEPT -o ${IF_SRV1}
+
+iptables -A INPUT -p icmp --icmp-type 3 -m state --state NEW,ESTABLISHED -j ACCEPT -i ${IF_SRV1}
+iptables -A OUTPUT -p icmp --icmp-type 3 -m state --state NEW,ESTABLISHED -j ACCEPT -o ${IF_SRV1}
+
+
+################################################################################
+### Rabbit
+################################################################################
+iptables -A INPUT -p tcp -m state --state ESTABLISHED --dport 1024:65535 -j ACCEPT -i ${IF_SRV0}
+iptables -A OUTPUT -p tcp -m state --state NEW,ESTABLISHED --dport 5672 -j ACCEPT -o ${IF_SRV0}
+
+iptables -A INPUT -p tcp -m state --state ESTABLISHED --dport 1024:65535 -j ACCEPT -i ${IF_SRV0}
+iptables -A OUTPUT -p tcp -m state --state NEW,ESTABLISHED --dport 5672 -j ACCEPT -o ${IF_SRV0}
+
+################################################################################
+### Monitoring
+################################################################################
+iptables -A OUTPUT -p udp -m state --state NEW,ESTABLISHED --sport 1024:65535 --dport 9060 -j ACCEPT -o ${IF_SRV0}

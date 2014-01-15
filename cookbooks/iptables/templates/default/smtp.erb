@@ -1,0 +1,41 @@
+#!/bin/bash
+IF_SRV0=eth0
+
+# SSH access
+SA_Update[0]=192.87.106.229
+SA_Update[1]=38.124.232.61
+SA_Update[2]=78.47.167.123
+SA_Update[3]=204.89.241.6
+
+################################################################################
+### SMTP / IMAP / POP3
+################################################################################
+
+iptables -A INPUT -i eth0 -p tcp -m state --state NEW,ESTABLISHED -m tcp --sport 25 --dport 1024:65535 -j ACCEPT
+iptables -A INPUT -i eth0 -p tcp -m state --state NEW,ESTABLISHED -m tcp --dport 25 --sport 1024:65535 -j ACCEPT
+
+iptables -A OUTPUT -o eth0 -p tcp -m state --state NEW,ESTABLISHED -m tcp --sport 25 --dport 1024:65535 -j ACCEPT
+iptables -A OUTPUT -o eth0 -p tcp -m state --state NEW,ESTABLISHED -m tcp --dport 25 --sport 1024:65535 -j ACCEPT
+
+
+iptables -A INPUT -i eth0 -p tcp -m state --state NEW,ESTABLISHED -m tcp --sport 1024:65535 --dport 110 -j ACCEPT
+iptables -A OUTPUT -o eth0 -p tcp -m state --state NEW,ESTABLISHED -m tcp --sport 110 --dport 1024:65535 -j ACCEPT
+
+iptables -A INPUT -i eth0 -p tcp -m state --state NEW,ESTABLISHED -m tcp --sport 1024:65535 --dport 995 -j ACCEPT
+iptables -A OUTPUT -o eth0 -p tcp -m state --state NEW,ESTABLISHED -m tcp --sport 995 --dport 1024:65535 -j ACCEPT
+
+
+iptables -A INPUT -i eth0 -p tcp -m state --state NEW,ESTABLISHED -m tcp --dport 143 -j ACCEPT
+iptables -A OUTPUT -o eth0 -p tcp -m state --state NEW,ESTABLISHED -m tcp --sport 143 -j ACCEPT
+
+
+
+################################################################################
+### Spam Assassin updates
+################################################################################
+
+for dst in ${SA_Update[*]}
+do
+iptables -A INPUT  -p tcp -i ${IF_SRV0} -m state --state     ESTABLISHED -s ${dst} --sport 80 -j ACCEPT
+iptables -A OUTPUT -p tcp -o ${IF_SRV0} -m state --state NEW,ESTABLISHED -d ${dst} --dport 80 -j ACCEPT
+done

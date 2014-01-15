@@ -1,0 +1,223 @@
+#!/bin/sh
+
+################################################################################
+### Variables
+################################################################################
+
+# Interface
+IF_SRV0=eth0
+
+# Recursive TEL DNS servers
+DNS_REV[0]=172.16.4.100
+DNS_REV[1]=172.16.4.99
+DNS_REV[1]=172.17.4.100
+DNS_REV[1]=172.17.4.99
+
+# SSH access
+NET_SSH[0]=172.16.1.19
+NET_SSH[1]=172.16.1.4
+NET_SSH[2]=172.17.1.4
+NET_SSH[3]=172.16.1.11
+NET_SSH[4]=172.16.1.18
+NET_SSH[5]=172.17.1.18
+NET_SSH[6]=172.16.1.26
+NET_SSH[7]=172.16.2.112
+NET_SSH[8]=172.16.2.113
+
+
+# Update servers:
+SRV_SWUP[0]=172.16.1.19
+SRV_SWUP[1]=172.16.1.23
+SRV_SWUP[2]=172.16.1.25
+
+# SysLog Server
+SRV_SYSLOG[0]=172.16.1.4
+SRV_SYSLOG[1]=172.17.1.4
+SRV_SYSLOG[2]=172.16.1.27
+
+# NTP Server
+SRV_NTP[0]=172.16.4.100
+SRV_NTP[1]=172.16.4.99
+SRV_NTP[2]=172.17.4.100
+SRV_NTP[3]=172.17.4.99
+
+# Chef Server
+SRV_Chef[0]=172.16.1.19
+
+# SCOM Management Servers
+SRV_SCOM[0]=172.16.1.18
+SRV_SCOM[1]=172.17.1.18
+
+# Allow ICMP
+SRV_ICMP[0]=172.16.6.101
+SRV_ICMP[1]=172.17.6.101
+SRV_ICMP[2]=172.16.1.18
+SRV_ICMP[3]=172.16.6.102
+SRV_ICMP[4]=172.16.1.18
+SRV_ICMP[5]=172.17.1.18
+SRV_ICMP[6]=172.17.6.102
+
+# SNMP
+SRV_SNMP[0]=172.16.4.101
+SRV_SNMP[0]=172.17.4.101
+
+# AD Authentication
+SRV_TELDC[0]=172.16.4.100
+SRV_TELDC[1]=172.16.4.99
+SRV_TELDC[2]=172.17.4.100
+SRV_TELDC[3]=172.17.4.99
+
+##### CLEAN UP BEFORE STARTING #####
+#flush chains
+iptables -F
+iptables -t nat -F
+iptables -t mangle -F
+# delete user define chains
+iptables -X
+iptables -t nat -X
+iptables -t mangle -X
+# zero counters
+iptables -Z
+iptables -t nat -Z
+iptables -t mangle -Z
+
+##### DEFAULT = DROP #####
+iptables -P INPUT DROP
+iptables -P FORWARD DROP
+iptables -P OUTPUT DROP
+
+############################################
+### localhost rules
+############################################
+iptables -A INPUT   -i lo -j ACCEPT
+iptables -A OUTPUT  -o lo -j ACCEPT
+iptables -A FORWARD -i lo -j DROP
+iptables -A FORWARD -o lo -j DROP
+
+################################################################################
+### Access to DNS - Allow Linux Servers to Query Windows DNS Servers
+################################################################################
+for dest in ${DNS_REV[*]}
+do
+for port in 53 1024:
+do
+iptables -A OUTPUT -p udp -o ${IF_SRV0} -m state --state NEW,ESTABLISHED --sport ${port} -d ${dest} --dport 53 -j ACCEPT
+iptables -A INPUT  -p udp -i ${IF_SRV0} -m state --state     ESTABLISHED --sport 53 -s ${dest} --dport ${port} -j ACCEPT
+done
+done
+
+################################################################################
+### SSH Administration - Required to allow SSH access from Monitoring and Management Servers
+################################################################################
+for src in ${NET_SSH[*]}
+do
+iptables -A INPUT  -p tcp -i ${IF_SRV0} -m state --state NEW,ESTABLISHED -s ${src} --sport 1024: --dport 22    -j ACCEPT
+iptables -A OUTPUT -p tcp -o ${IF_SRV0} -m state --state     ESTABLISHED -d ${src} --sport 22    --dport 1024: -j ACCEPT
+done
+
+################################################################################
+### Update access - Required for Linux Servers to retrieve security nad AV updates
+################################################################################
+for dst in ${SRV_SWUP[*]}
+do
+iptables -A INPUT  -p tcp -i ${IF_SRV0} -m state --state     ESTABLISHED -s ${dst} --sport 80 -j ACCEPT
+iptables -A OUTPUT -p tcp -o ${IF_SRV0} -m state --state NEW,ESTABLISHED -d ${dst} --dport 80 -j ACCEPT
+done
+
+################################################################################
+### SysLog access - Required to allow Linux Servers to Send Syslog Messages to Syslog Servers
+################################################################################
+for dst in ${SRV_SYSLOG[*]}
+do
+iptables -A OUTPUT -p udp -o ${IF_SRV0} -m state --state NEW,ESTABLISHED -d ${dst} --dport 514 -j ACCEPT
+done
+
+################################################################################
+### Chef Access - Required to allow Linux Servers to communicate with Chef Servers
+################################################################################
+for dst in ${SRV_Chef[*]}
+do
+iptables -A OUTPUT -p tcp -o ${IF_SRV0} -m state --state NEW,ESTABLISHED -d ${dst} --dport 4000 -j ACCEPT
+iptables -A INPUT  -p tcp -i ${IF_SRV0} -m state --state     ESTABLISHED -s ${dst} --sport 1024:65535 -j ACCEPT
+done
+
+################################################################################
+### NTP - Required to allow NTP on Linux Servers to Sync with time servers
+################################################################################
+for dst in ${SRV_NTP[*]}
+do
+iptables -A OUTPUT -p udp -o ${IF_SRV0} -m state --state NEW,ESTABLISHED -d ${dst} --dport 123 -j ACCEPT
+iptables -A INPUT  -p tcp -i ${IF_SRV0} -m state --state     ESTABLISHED -s ${dst} --dport 123 -j ACCEPT
+done
+
+################################################################################
+### SCOM Monitoring - Required for Linux Servers to be monitored by SCOM
+################################################################################
+for dst in ${SRV_SCOM[*]}
+do
+iptables -A OUTPUT -p tcp -m state --state NEW,ESTABLISHED --dport 1270 -o ${IF_SRV0} -j ACCEPT -d ${dst}
+iptables -A INPUT -p tcp -m state --state NEW,ESTABLISHED --dport 1024:65535 -i ${IF_SRV0} -j ACCEPT -s ${dst}
+iptables -A INPUT -p tcp -m state --state NEW,ESTABLISHED --dport 1270 -i ${IF_SRV0} -j ACCEPT -s ${dst}
+done
+
+################################################################################
+### SNMP - Allow Linux Servers to be monitoring by SNMP
+################################################################################
+for dst in ${SRV_SNMP[*]}
+do
+iptables -A OUTPUT -p udp -o ${IF_SRV0} -m state --state NEW,ESTABLISHED -d ${dst} --dport 162 -j ACCEPT
+iptables -A OUTPUT -p udp -o ${IF_SRV0} -m state --state NEW,ESTABLISHED -d ${dst} --dport 1024:65535 -j ACCEPT
+iptables -A INPUT  -p udp -i ${IF_SRV0} -m state --state NEW,ESTABLISHED -s ${dst} --dport 161 -j ACCEPT
+done
+
+################################################################################
+### Active Directory Authentication - allow likewise to authenticate against AD
+################################################################################
+for dst in ${SRV_TELDC[*]}
+do
+iptables -A INPUT -p udp -i ${IF_SRV0} -m state --state NEW,ESTABLISHED -s ${dst} --dport 1024:65535 --sport 88 -j ACCEPT
+iptables -A INPUT -p tcp -i ${IF_SRV0} -m state --state NEW,ESTABLISHED -s ${dst} --dport 1024:65535 --sport 88 -j ACCEPT
+iptables -A INPUT -p tcp -i ${IF_SRV0} -m state --state NEW,ESTABLISHED -s ${dst} --sport 135 -j ACCEPT
+iptables -A INPUT -p udp i ${IF_SRV0} -m state --state NEW,ESTABLISHED -s ${dst} --sport 137 -j ACCEPT
+iptables -A INPUT -p tcp i ${IF_SRV0} -m state --state NEW,ESTABLISHED -s ${dst} --sport 139 -j ACCEPT
+iptables -A INPUT -p udp i ${IF_SRV0} -m state --state NEW,ESTABLISHED -s ${dst} --sport 389 --dport 1024:65535 -j ACCEPT
+iptables -A INPUT -p tcp i ${IF_SRV0} -m state --state NEW,ESTABLISHED -s ${dst} --sport 389 --dport 1024:65535 -j ACCEPT
+iptables -A INPUT -p tcp i ${IF_SRV0} -m state --state NEW,ESTABLISHED -s ${dst} --sport 445 -j ACCEPT
+iptables -A INPUT -p udp i ${IF_SRV0} -m state --state NEW,ESTABLISHED -s ${dst} --sport 464 -j ACCEPT
+iptables -A INPUT -p tcp i ${IF_SRV0} -m state --state NEW,ESTABLISHED -s ${dst} --sport 3268 -j ACCEPT
+iptables -A OUTPUT -p udp -o ${IF_SRV0} -m state --state NEW,ESTABLISHED -d ${dst} --sport 1024:65535 --dport 88 -j ACCEPT
+iptables -A OUTPUT -p tcp -o ${IF_SRV0} -m state --state NEW,ESTABLISHED -d ${dst} --sport 1024:65535 --dport 88 -j ACCEPT
+iptables -A OUTPUT -p tcp -o ${IF_SRV0} -m state --state NEW,ESTABLISHED -d ${dst} --dport 135 -j ACCEPT
+iptables -A OUTPUT -p udp -o ${IF_SRV0} -m state --state NEW,ESTABLISHED -d ${dst} --dport 137 -j ACCEPT
+iptables -A OUTPUT -p tcp -o ${IF_SRV0} -m state --state NEW,ESTABLISHED -d ${dst} --dport 139 -j ACCEPT
+iptables -A OUTPUT -p udp -o ${IF_SRV0} -m state --state NEW,ESTABLISHED -d ${dst} --sport 1024:65535 --dport 389 -j ACCEPT
+iptables -A OUTPUT -p tcp -o ${IF_SRV0} -m state --state NEW,ESTABLISHED -d ${dst} --sport 1024:65535 --dport 389 -j ACCEPT
+iptables -A OUTPUT -p tcp -o ${IF_SRV0} -m state --state NEW,ESTABLISHED -d ${dst} --dport 445 -j ACCEPT
+iptables -A OUTPUT -p udp -o ${IF_SRV0} -m state --state NEW,ESTABLISHED -d ${dst} --dport 464 -j ACCEPT
+iptables -A OUTPUT -p tcp -o ${IF_SRV0} -m state --state NEW,ESTABLISHED -d ${dst} --dport 3268 -j ACCEPT
+done
+
+################################################################################
+### ICMP allow Allow Monitoring Servers to ping Linux Servers
+################################################################################
+for dst in ${SRV_ICMP[*]}
+do
+
+iptables -A INPUT -s ${dst} -p icmp -m icmp --icmp-type 0 -j ACCEPT
+iptables -A INPUT -s ${dst} -p icmp -m icmp --icmp-type 8 -j ACCEPT
+iptables -A INPUT -s ${dst} -p icmp -m icmp --icmp-type 0 -j ACCEPT
+iptables -A INPUT -s ${dst} -p icmp -m icmp --icmp-type 8 -j ACCEPT
+iptables -A OUTPUT -d ${dst} -p icmp -m icmp --icmp-type 8 -j ACCEPT
+iptables -A OUTPUT -d ${dst} -p icmp -m icmp --icmp-type 0 -j ACCEPT
+iptables -A OUTPUT -d ${dst} -p icmp -m icmp --icmp-type 8 -j ACCEPT
+iptables -A OUTPUT --d ${dst} -p icmp -m icmp --icmp-type 0 -j ACCEPT
+done
+
+
+################################################################################
+### Log everything else that hasnt been explicitly allowed and is being blocked
+################################################################################
+for chain in  INPUT OUTPUT FORWARD
+do
+iptables -A ${chain} -j LOG --log-prefix "IPT-${chain}_UNEXPECTED: " --log-level 2
+done

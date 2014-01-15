@@ -1,0 +1,9 @@
+#!/bin/sh
+
+################################################################################
+### Log everything else that hasnt been explicitly allowed and is being blocked
+################################################################################
+for chain in  INPUT OUTPUT FORWARD
+do
+iptables -A ${chain} -j LOG --log-prefix "IPT-${chain}_UNEXPECTED: " --log-level 2
+done

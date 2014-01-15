@@ -1,0 +1,48 @@
+#!/bin/bash
+
+################################################################################
+### Variables
+################################################################################
+
+# Interface
+IF_SRV0=eth0
+IF_SRV1=eth1
+IF_SRV2=eth2
+IF_SRV3=eth3
+
+
+
+iptables -A INPUT -p udp -m state --state NEW,ESTABLISHED --sport 10000:65535 -j ACCEPT -i ${IF_SRV0}
+iptables -A INPUT -p udp -m state --state NEW,ESTABLISHED --sport 10000:65535 -j ACCEPT -i ${IF_SRV1}
+iptables -A INPUT -p udp -m state --state NEW,ESTABLISHED --sport 10000:65535 -j ACCEPT -i ${IF_SRV2}
+iptables -A INPUT -p udp -m state --state NEW,ESTABLISHED --sport 10000:65535 -j ACCEPT -i ${IF_SRV3}
+
+
+iptables -A OUTPUT -p udp -m state --state NEW,ESTABLISHED --dport 10000:65535 -j ACCEPT -o ${IF_SRV0}
+iptables -A OUTPUT -p udp -m state --state NEW,ESTABLISHED --dport 10000:65535 -j ACCEPT -o ${IF_SRV1}
+iptables -A OUTPUT -p udp -m state --state NEW,ESTABLISHED --dport 10000:65535 -j ACCEPT -o ${IF_SRV2}
+iptables -A OUTPUT -p udp -m state --state NEW,ESTABLISHED --dport 10000:65535 -j ACCEPT -o ${IF_SRV3}
+
+iptables -A INPUT -p udp -m state --state NEW,ESTABLISHED --dport 8000:8222 -j ACCEPT -i ${IF_SRV0}
+iptables -A OUTPUT -p udp -m state --state NEW,ESTABLISHED --dport 1024:65535 -j ACCEPT -o ${IF_SRV0}
+
+iptables -A INPUT -p udp -m state --state NEW,ESTABLISHED --dport 8000:8222 -j ACCEPT -i ${IF_SRV1}
+iptables -A OUTPUT -p udp -m state --state NEW,ESTABLISHED --dport 1024:65535 -j ACCEPT -o ${IF_SRV1}
+
+iptables -A INPUT -p udp -m state --state NEW,ESTABLISHED --dport 8000:8222 -j ACCEPT -i ${IF_SRV2}
+iptables -A OUTPUT -p udp -m state --state NEW,ESTABLISHED --dport 1024:65535 -j ACCEPT -o ${IF_SRV2}
+
+iptables -A INPUT -p udp -m state --state NEW,ESTABLISHED --dport 8000:8222 -j ACCEPT -i ${IF_SRV3}
+iptables -A OUTPUT -p udp -m state --state NEW,ESTABLISHED --dport 1024:65535 -j ACCEPT -o ${IF_SRV3}
+
+iptables -A INPUT -p udp -m state --state NEW,ESTABLISHED --dport 9000:9222 -j ACCEPT -i ${IF_SRV0}
+iptables -A OUTPUT -p udp -m state --state NEW,ESTABLISHED --dport 1024:65535 -j ACCEPT -o ${IF_SRV0}
+
+iptables -A INPUT -p udp -m state --state NEW,ESTABLISHED --dport 9000:9222 -j ACCEPT -i ${IF_SRV1}
+iptables -A OUTPUT -p udp -m state --state NEW,ESTABLISHED --dport 1024:65535 -j ACCEPT -o ${IF_SRV1}
+
+iptables -A INPUT -p udp -m state --state NEW,ESTABLISHED --dport 9000:9222 -j ACCEPT -i ${IF_SRV2}
+iptables -A OUTPUT -p udp -m state --state NEW,ESTABLISHED --dport 1024:65535 -j ACCEPT -o ${IF_SRV2}
+
+iptables -A INPUT -p udp -m state --state NEW,ESTABLISHED --dport 9000:9222 -j ACCEPT -i ${IF_SRV3}
+iptables -A OUTPUT -p udp -m state --state NEW,ESTABLISHED --dport 1024:65535 -j ACCEPT -o ${IF_SRV3}
