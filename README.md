@@ -1,6 +1,4 @@
 chef-repo
 =========
 
- This is my mega super chef for developing chef awesomeness.
-
- YEAH!
+chef repo for building and testing new chef scripts and developing ideas.
